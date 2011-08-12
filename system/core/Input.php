@@ -329,13 +329,47 @@ class CI_Input {
 	/**
 	* Validate IP Address
 	*
-	* Updated version suggested by Geert De Deckere
-	*
 	* @access	public
 	* @param	string
-	* @return	string
+	* @param	string	ipv4 or ipv6
+	* @return	bool
 	*/
-	function valid_ip($ip)
+	public function valid_ip($ip, $which = '')
+	{
+		$which = strtolower($which);
+		
+		if ($which != 'ipv6' OR $which != 'ipv4')
+		{
+			if (strpos($ip, ':') !== FALSE)
+			{
+				$which = 'ipv6';
+			}
+			elseif (strpos($ip, '.') !== FALSE)
+			{
+				$which = 'ipv4';
+			}
+			else
+			{
+				return FALSE;
+			}
+		}
+		
+		$func = '_valid_'.$which;
+		return $this->$func($ip);
+	}
+	
+	// --------------------------------------------------------------------
+	
+	/**
+	* Validate IPv4 Address
+	*
+	* Updated version suggested by Geert De Deckere
+	*
+	* @access	protected
+	* @param	string
+	* @return	bool
+	*/
+	protected function _valid_ipv4($ip)
 	{
 		$ip_segments = explode('.', $ip);
 
@@ -349,6 +383,7 @@ class CI_Input {
 		{
 			return FALSE;
 		}
+		
 		// Check each segment
 		foreach ($ip_segments as $segment)
 		{
@@ -361,6 +396,120 @@ class CI_Input {
 		}
 
 		return TRUE;
+	}
+		
+	// --------------------------------------------------------------------
+	
+	/**
+	* Validate IPv6 Address
+	*
+	* @access	protected
+	* @param	string
+	* @return	bool
+	*/
+	protected function _valid_ipv6($str)
+	{
+		// 8 groups, separated by :
+		// 0-ffff per group
+		// one set of consecutive 0 groups can be collapsed to ::
+		
+		$groups = 8;
+		$collapsed = FALSE;
+		
+		$chunks = $this->_chunk_ipv6($str);
+		
+		// Rule out easy nonsense
+		if (current($chunks) == ':' OR end($chunks) == ':')
+		{
+			return FALSE;
+		}
+		
+		// PHP supports IPv4-mapped IPv6 addresses, so we'll expect those as well
+		if (strpos(end($chunks), '.') !== FALSE)
+		{
+			$ipv4 = array_pop($chunks);
+			
+			if ( ! $this->_valid_ipv4($ipv4))
+			{
+				return FALSE;
+			}
+			
+			$groups--;
+		}
+		
+		while ($seg = array_pop($chunks))
+		{
+			if ($seg[0] == ':')
+			{
+				if (--$groups == 0)
+				{
+					return FALSE;	// too many groups
+				}
+				
+				if (strlen($seg) > 2)
+				{
+					return FALSE;	// long separator
+				}
+				
+				if ($seg == '::')
+				{
+					if ($collapsed)
+					{
+						return FALSE;	// multiple collapsed
+					}
+					
+					$collapsed = TRUE;
+				}
+			}
+			elseif (preg_match("/[^0-9a-f]/i", $seg) OR strlen($seg) > 4)
+			{
+				return FALSE; // invalid segment
+			}
+		}
+
+		return $collapsed OR $groups == 1;
+	}
+	
+	// --------------------------------------------------------------------
+	
+	/**
+	* Break apart IPv6 Address
+	*
+	* Breaks address into blocks of consecutive colons and other strings
+	* I have a weird feeling this could be better.
+	*
+	* @access	protected
+	* @param	string
+	* @return	array
+	*/
+	protected function _chunk_ipv6($str)
+	{
+		$chunk_str = '';
+		$chunks = array();
+		
+		$i = 0;
+		$l = strlen($str);
+		
+		$in_sep = FALSE;	// in a separator or in a segment?
+		
+		while ($i < $l)
+		{
+			$chr = $str[$i++];
+			
+			if (($chr == ':') != $in_sep)
+			{
+				$chunks[] = $chunk_str;
+				$chunk_str = '';
+				
+				$in_sep = ! $in_sep;
+			}
+			
+			$chunk_str .= $chr;
+		}
+		
+		$chunks[] = $chunk_str;
+
+		return array_filter($chunks);
 	}
 
 	// --------------------------------------------------------------------
