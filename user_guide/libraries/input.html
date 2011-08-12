@@ -237,8 +237,8 @@ zero the cookie will only last as long as the browser is open.</p>
 
 <h2>$this->input->valid_ip(<var>$ip</var>)</h2>
 
-<p>Takes an IP address as input and returns TRUE or FALSE (boolean) if it is valid or not.  Note:  The $this->input->ip_address() function above
-validates the IP automatically.</p>
+<p>Takes an IP address as input and returns TRUE or FALSE (boolean) if it is valid or not.</p>
+<p><strong>Note:</strong> The $this->input->ip_address() function above validates the IP automatically.</p>
 
 <code>if ( ! $this-&gt;input-&gt;valid_ip($ip))<br />
 {<br />
@@ -248,6 +248,11 @@ else<br />
 {<br />
 &nbsp;&nbsp;&nbsp;&nbsp; echo 'Valid';<br />
 }</code>
+
+<p>This method recognizes IPv6 IP addresses, if you need to make sure that an IP follows a certain format, you can pass your choice as a second parameter:</p>
+<code>$this-&gt;input-&gt;valid_ip($ip, 'ipv4');<br />
+<br />
+$this-&gt;input-&gt;valid_ip($ip, 'ipv6');</code>
 
 
 <h2>$this->input->user_agent()</h2>
